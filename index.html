@@ -575,8 +575,8 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-// API 端點：自己的 Cloudflare Worker
-const API_BASE = 'https://chao8-api.a42599.workers.dev';
+// API 端點：同網域（由 Worker 代理到後端）
+const API_BASE = '';
 
 // ── Toast ──
 function showToast(msg, type = '') {
