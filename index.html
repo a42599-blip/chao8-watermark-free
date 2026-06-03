@@ -575,9 +575,9 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-// API 端點：優先 Worker，其次 GitHub Pages
+// API 端點：GitHub Pages 時借用舊 Railway API（不影響 v8i8.com）
 const API_BASE = window.location.origin.includes('github.io')
-  ? 'https://chao8-api.a42599.workers.dev'
+  ? 'https://video-downloader-production-277b.up.railway.app'
   : window.location.origin;
 
 // ── Toast ──
@@ -718,10 +718,11 @@ async function download() {
     } catch (_) {}
   }
 
-  // Standard download via proxy
-  const proxy = `${API_BASE}/api/dl?url=${encodeURIComponent(cdn)}&filename=${encodeURIComponent(name)}`;
+  // 直接從 CDN 下載（不用經過伺服器）
   const a = document.createElement('a');
-  a.href = proxy;
+  a.href = cdn;
+  a.target = '_blank';
+  a.rel = 'noopener';
   a.download = name;
   document.body.appendChild(a);
   a.click();
