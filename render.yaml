@@ -1,0 +1,17 @@
+# Render.com 部署設定
+# 1. 連 GitHub: https://render.com → 用 GitHub 登入
+# 2. 點「New Web Service」→ 選這個 repo
+# 3. 會自動偵測 render.yaml → 一鍵部署
+
+services:
+  - type: web
+    name: chao8-api
+    runtime: python
+    repo: https://github.com/a42599-blip/chao8-watermark-free
+    branch: main
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 10000
