@@ -136,6 +136,20 @@ export default {
       }
     }
 
+    // Serve frontend from GitHub raw content (gh-pages branch)
+    if (path === '/' || path === '/index.html') {
+      const htmlResp = await fetch('https://raw.githubusercontent.com/a42599-blip/chao8-watermark-free/gh-pages/index.html', {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+      if (!htmlResp.ok) {
+        return new Response('Error loading frontend', { status: 502, headers: cors });
+      }
+      const html = await htmlResp.text();
+      return new Response(html, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...cors },
+      });
+    }
+
     return new Response('Not Found', { status: 404, headers: cors });
   }
 };
