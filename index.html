@@ -575,8 +575,8 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-// 部署到 GitHub Pages 時指向 Worker API
-const API = window.location.origin.includes('github.io')
+// API 端點：優先 Worker，其次 GitHub Pages
+const API_BASE = window.location.origin.includes('github.io')
   ? 'https://chao8-api.a42599.workers.dev'
   : window.location.origin;
 
@@ -616,7 +616,7 @@ async function parseVideo() {
   reelCard.classList.remove('show');
 
   try {
-    const r = await fetch(`${API}/api/video-info?url=${encodeURIComponent(url)}`);
+    const r = await fetch(`${API_BASE}/api/video-info?url=${encodeURIComponent(url)}`);
     const data = await r.json();
 
     if (!data.has_video || !data.formats || data.formats.length === 0) {
@@ -719,7 +719,7 @@ async function download() {
   }
 
   // Standard download via proxy
-  const proxy = `${API}/api/dl?url=${encodeURIComponent(cdn)}&filename=${encodeURIComponent(name)}`;
+  const proxy = `${API_BASE}/api/dl?url=${encodeURIComponent(cdn)}&filename=${encodeURIComponent(name)}`;
   const a = document.createElement('a');
   a.href = proxy;
   a.download = name;
