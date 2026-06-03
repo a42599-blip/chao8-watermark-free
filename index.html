@@ -575,10 +575,8 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-// API 端點：GitHub Pages 時借用舊 Railway API（不影響 v8i8.com）
-const API_BASE = window.location.origin.includes('github.io')
-  ? 'https://video-downloader-production-277b.up.railway.app'
-  : window.location.origin;
+// API 端點：自己的 Cloudflare Worker
+const API_BASE = 'https://chao8-api.a42599.workers.dev';
 
 // ── Toast ──
 function showToast(msg, type = '') {
