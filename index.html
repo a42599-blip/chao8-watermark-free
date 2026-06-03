@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>超8去水印下载</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1a1a24;
+    --card2: #22222f;
+    --accent: #8b5cf6;
+    --accent2: #a78bfa;
+    --text: #f1f1f7;
+    --text2: #a1a1b5;
+    --green: #22c55e;
+    --red: #ef4444;
+    --radius: 16px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 520px;
+    padding: 24px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Header */
+  header {
+    text-align: center;
+    padding: 32px 0 24px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p {
+    color: var(--text2);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  /* Input Area */
+  .input-area {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .input-area label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .input-row input {
+    flex: 1;
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-row input:focus {
+    border-color: var(--accent);
+  }
+  .input-row input::placeholder {
+    color: var(--text2);
+    opacity: 0.6;
+  }
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  /* Status */
+  .status {
+    text-align: center;
+    padding: 16px;
+    color: var(--text2);
+    font-size: 14px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.error { color: var(--red); }
+  .status.success { color: var(--green); }
+  /* Result Card */
+  .result {
+    display: none;
+    background: var(--card);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-top: 16px;
+  }
+  .result.show { display: block; }
+  .result .thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--card2);
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .result .thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s;
+  }
+  .result .thumb-wrap:hover img { transform: scale(1.03); }
+  .result .thumb-wrap .play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .result .thumb-wrap:hover .play-overlay { opacity: 1; }
+  .result .thumb-wrap .play-overlay svg {
+    width: 56px;
+    height: 56px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+  }
+  .result .info {
+    padding: 16px 20px 20px;
+  }
+  .result .info h2 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .result .info .meta {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 14px;
+  }
+  .result .info .meta span { margin-right: 12px; }
+  /* Format Selector */
+  .format-section { margin-bottom: 14px; }
+  .format-section label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .format-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .format-btn {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .format-btn:hover { border-color: var(--accent); }
+  .format-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .format-btn .note {
+    display: block;
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+  /* Download Button */
+  .download-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .download-btn:hover { background: #16a34a; transform: translateY(-1px); }
+  .download-btn:active { transform: translateY(0); }
+  .download-btn:disabled { background: #166534; opacity: 0.6; cursor: not-allowed; }
+  .download-btn svg { width: 20px; height: 20px; }
+  /* HD Note */
+  .hd-note {
+    font-size: 12px;
+    color: var(--text2);
+    text-align: center;
+    margin-top: 8px;
+    opacity: 0.7;
+  }
+  /* Hint text */
+  .hint {
+    font-size: 12px;
+    color: var(--text2);
+    text-align: center;
+    margin-top: 16px;
+    opacity: 0.5;
+    line-height: 1.6;
+  }
+  .hint strong { color: var(--accent2); opacity: 1; }
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 24px 0 12px;
+    font-size: 12px;
+    color: var(--text2);
+    opacity: 0.4;
+  }
+  /* Animation */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  /* Mobile optimizations */
+  @media (max-width: 420px) {
+    .container { padding: 16px 12px; }
+    header h1 { font-size: 24px; }
+    .input-area { padding: 16px; }
+    .input-row { flex-direction: column; }
+    .input-row .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⭕ 超8</h1>
+    <p>去水印下载 · 直连 CDN</p>
+  </header>
+
+  <div class="input-area">
+    <label for="urlInput">贴上影片连结</label>
+    <div class="input-row">
+      <input id="urlInput" type="url" placeholder="抖音 / YouTube 连结..." autocomplete="off" enterkeyhint="go">
+      <button class="btn" id="parseBtn">解析</button>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="result" id="result">
+    <div class="thumb-wrap" id="thumbWrap">
+      <img id="thumbnail" src="" alt="缩图">
+      <div class="play-overlay">
+        <svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+    </div>
+    <div class="info">
+      <h2 id="videoTitle">标题</h2>
+      <div class="meta">
+        <span id="videoUploader"></span>
+        <span id="videoDuration"></span>
+        <span id="videoPlatform"></span>
+      </div>
+      <div class="format-section" id="formatSection">
+        <label>选择画质</label>
+        <div class="format-options" id="formatOptions"></div>
+      </div>
+      <button class="download-btn" id="downloadBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h3.66V9h3.84L12 2z" transform="rotate(180,12,12)"/></svg>
+        下载影片
+      </button>
+      <div class="hd-note" id="hdNote"></div>
+    </div>
+  </div>
+
+  <div class="hint">
+    <strong>⭕ 零流量经过服务器</strong> · 解析后直连 CDN<br>
+    支援：<strong>抖音</strong>（无水印） · <strong>YouTube</strong>（360p~1080p）
+  </div>
+
+  <footer>
+    超8去水印下载 · s8.v8i8.com
+  </footer>
+</div>
+
+<script>
+// ── DOM ──
+const urlInput = document.getElementById('urlInput');
+const parseBtn = document.getElementById('parseBtn');
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+const thumbnail = document.getElementById('thumbnail');
+const thumbWrap = document.getElementById('thumbWrap');
+const videoTitle = document.getElementById('videoTitle');
+const videoUploader = document.getElementById('videoUploader');
+const videoDuration = document.getElementById('videoDuration');
+const videoPlatform = document.getElementById('videoPlatform');
+const formatOptions = document.getElementById('formatOptions');
+const formatSection = document.getElementById('formatSection');
+const downloadBtn = document.getElementById('downloadBtn');
+const hdNote = document.getElementById('hdNote');
+
+let currentData = null;
+let currentFormat = null;
+
+// ── API Base ──
+const API_BASE = window.location.origin;
+
+// ── Helper ──
+function showStatus(msg, type = '') {
+  statusEl.textContent = msg;
+  statusEl.className = 'status show' + (type ? ' ' + type : '');
+}
+function hideStatus() {
+  statusEl.className = 'status';
+}
+function formatDuration(sec) {
+  if (!sec) return '';
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+function getPlatformIcon(platform) {
+  switch(platform) {
+    case 'Douyin': return '🎵';
+    case 'YouTube': return '▶️';
+    default: return '🎬';
+  }
+}
+
+// ── Parse ──
+async function parseVideo() {
+  let url = urlInput.value.trim();
+  if (!url) {
+    showStatus('请贴上影片连结', 'error');
+    return;
+  }
+  // Auto-add https://
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+    urlInput.value = url;
+  }
+
+  hideStatus();
+  parseBtn.disabled = true;
+  parseBtn.innerHTML = '<span class="spinner"></span> 解析中...';
+  resultEl.classList.remove('show');
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/video-info?url=${encodeURIComponent(url)}`);
+    const data = await resp.json();
+
+    if (!data.has_video || !data.formats || data.formats.length === 0) {
+      showStatus(data._note || '解析失败，请确认连结是否有效', 'error');
+      parseBtn.disabled = false;
+      parseBtn.textContent = '解析';
+      return;
+    }
+
+    currentData = data;
+    showResult(data);
+  } catch (err) {
+    showStatus('网路错误，请稍后重试', 'error');
+  }
+
+  parseBtn.disabled = false;
+  parseBtn.textContent = '解析';
+}
+
+// ── Display Result ──
+function showResult(data) {
+  // Thumbnail
+  if (data.thumbnail) {
+    thumbnail.src = data.thumbnail;
+  } else {
+    thumbnail.src = '';
+    thumbnail.style.background = 'var(--card2)';
+  }
+
+  // Info
+  videoTitle.textContent = data.title || '影片';
+  videoUploader.textContent = data.uploader ? `📺 ${data.uploader}` : '';
+  videoDuration.textContent = formatDuration(data.duration) ? `⏱ ${formatDuration(data.duration)}` : '';
+  videoPlatform.textContent = `${getPlatformIcon(data.platform)} ${data.platform || ''}`;
+
+  // Format Options
+  formatOptions.innerHTML = '';
+  const formats = data.formats || [];
+
+  if (formats.length === 0) {
+    formatSection.style.display = 'none';
+    currentFormat = { cdn_url: data.cdn_url || '', single: true };
+  } else {
+    formatSection.style.display = 'block';
+    formats.forEach((f, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'format-btn' + (idx === 0 ? ' active' : '');
+      btn.innerHTML = f.label;
+      if (!f.single) {
+        btn.innerHTML += '<span class="note">需合并音讯</span>';
+      }
+      btn.dataset.index = idx;
+      btn.addEventListener('click', () => selectFormat(idx));
+      formatOptions.appendChild(btn);
+    });
+    selectFormat(0);
+  }
+
+  // HD Note
+  const hasHighRes = formats.some(f => f.height >= 1080 && !f.single);
+  if (hasHighRes && data.platform === 'YouTube') {
+    hdNote.textContent = '⚠️ 1080p 以上为纯视频流，下载后需手动合并音讯';
+  } else {
+    hdNote.textContent = '';
+  }
+
+  // Click thumbnail to download
+  thumbWrap.onclick = () => doDownload();
+
+  resultEl.classList.add('show');
+  hideStatus();
+}
+
+function selectFormat(index) {
+  const btns = formatOptions.querySelectorAll('.format-btn');
+  btns.forEach((b, i) => b.classList.toggle('active', i === index));
+  currentFormat = currentData.formats[index];
+}
+
+// ── Download Logic ──
+async function doDownload() {
+  if (!currentFormat || !currentFormat.cdn_url) {
+    showStatus('无可用下载连结', 'error');
+    return;
+  }
+
+  const cdnUrl = currentFormat.cdn_url;
+  const isSingle = currentFormat.single !== false;
+  const filename = (currentData.title || 'video').replace(/[^\w\u4e00-\u9fff\-]/g, '_') + '.mp4';
+
+  // Try native download first
+  if (isSingle) {
+    // Direct CDN download (Youtube single formats / Douyin)
+    try {
+      // For iOS: Use navigator.share() for saving to photos
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+
+      if (isIOS && navigator.share) {
+        // iOS: download via blob + share
+        const resp = await fetch(cdnUrl, { mode: 'cors' });
+        const blob = await resp.blob();
+        const file = new File([blob], filename, { type: 'video/mp4' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: currentData.title });
+          return;
+        }
+      }
+
+      // Android / Desktop: use <a download> with proxy
+      const proxyUrl = `${API_BASE}/api/dl?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+      const a = document.createElement('a');
+      a.href = proxyUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      // Fallback: direct window open
+      window.open(cdnUrl, '_blank');
+    }
+  } else {
+    // Non-single format (YouTube 1080p+): show message
+    showStatus('1080p 以上需合并音讯，请改用 720p 以下画质', 'error');
+  }
+}
+
+// ── Events ──
+parseBtn.addEventListener('click', parseVideo);
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') parseVideo();
+});
+
+downloadBtn.addEventListener('click', doDownload);
+
+// Auto-focus input
+urlInput.focus();
+</script>
+</body>
+</html>
