@@ -1,0 +1,11 @@
+name = "chao8-api"
+main = "worker.js"
+compatibility_date = "2026-06-03"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "chao8-api"
+workers_dev = true  # 部署到 chao8-api.a42599.workers.dev
+
+# 自定義域名（部署後設定）
+# routes = [{ pattern = "s8.v8i8.com/api/*", zone_id = "ZONE_ID" }]

@@ -575,7 +575,10 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-const API = window.location.origin;
+// 部署到 GitHub Pages 時指向 Worker API
+const API = window.location.origin.includes('github.io')
+  ? 'https://chao8-api.a42599.workers.dev'
+  : window.location.origin;
 
 // ── Toast ──
 function showToast(msg, type = '') {
