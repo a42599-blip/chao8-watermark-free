@@ -285,7 +285,7 @@ async def video_info(url: str):
                 "formats": [{"id": "best", "label": "原始畫質（無浮水印）", "height": 0, "cdn_url": fast["cdn_url"], "single": True}],
             })
         need_cookies = fast.get("need_cookies", False)
-        note = "抖音需要 cookies，請在 cookies.txt 中設定有效的抖音 cookies" if need_cookies else "解析失敗，請確認連結是否有效"
+        note = "抖音暫時無法解析（API 變動中），請稍後再試" if not fast.get("cdn_url") and not fast.get("need_cookies") else "解析失敗，請確認連結是否有效"
         return JSONResponse({
             "title": "抖音影片", "thumbnail": "", "duration": 0, "uploader": "",
             "platform": "Douyin", "url": real_url, "has_video": False,
