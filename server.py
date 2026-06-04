@@ -85,23 +85,19 @@ async def _get_douyin_fast(url: str) -> dict:
     except Exception as e:
         print(f"[douyin/tikwm] {e}")
 
-    # 方法2：a_bogus API（不需 cookies）
+    # 方法2：a_bogus API（純技術簽名，不需 cookies/爬蟲模組）
     try:
         aweme_id = _parse_aweme_id(real_url)
         if aweme_id:
-            from crawlers.douyin.web.utils import BogusManager
-            from crawlers.douyin.web.models import PostDetail
-            import json as _json
-            params = {"aweme_id": aweme_id, "version_code": "170400", "app_name": "aweme",
-                      "build_number": "170400", "device_platform": "android"}
+            from crawlers.douyin.web.abogus import ABogus
+            params_str = f"aweme_id={aweme_id}&version_code=170400&app_name=aweme&build_number=170400&device_platform=android"
             ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"
-            a_bogus = BogusManager.ab_model_2_endpoint(params, ua)
-            api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
+            a_bogus = ABogus().get_value(params_str, ua)
+            api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{params_str}&a_bogus={a_bogus}"
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(api_url, headers={
                     "User-Agent": ua,
                     "Referer": "https://www.douyin.com/",
-                    "Accept": "application/json",
                 })
                 if resp.status_code == 200:
                     data = resp.json()
@@ -111,16 +107,18 @@ async def _get_douyin_fast(url: str) -> dict:
                         play_addr = video.get("play_addr", {})
                         url_list = play_addr.get("url_list", [])
                         if url_list:
-                            cdn = url_list[0].replace("playwm", "play") if "douyinvod" in url_list[0] else url_list[0]
+                            cdn = url_list[0].replace("playwm", "play")
+                            dur = ad.get("duration", 0)
+                            if dur > 1000: dur //= 1000
                             return {
                                 "title": (ad.get("desc") or "抖音影片")[:80],
-                                "thumbnail": ad.get("video", {}).get("cover", {}).get("url_list", [""])[0] if ad.get("video", {}).get("cover", {}) else "",
-                                "duration": ad.get("duration", 0),
+                                "thumbnail": video.get("cover", {}).get("url_list", [""])[0] if video.get("cover") else "",
+                                "duration": dur,
                                 "uploader": ad.get("author", {}).get("nickname", "") if ad.get("author") else "",
                                 "cdn_url": cdn,
                             }
     except ImportError:
-        print("[douyin/abogus] crawler module not available")
+        print("[douyin/abogus] module not available")
     except Exception as e:
         print(f"[douyin/abogus] {e}")
 
