@@ -260,12 +260,86 @@ async def video_info(url: str):
             "_note": "解析失敗，請確認連結是否有效",
         })
 
-    # ── 不支援的平台 ──
+    # ── 其他平台（通用 yt-dlp 解析）──
+    try:
+        loop = asyncio.get_event_loop()
+        def _generic_parse():
+            with yt_dlp.YoutubeDL({
+                "quiet": True, "no_warnings": True, "skip_download": True,
+            }) as ydl:
+                info = ydl.extract_info(real_url, download=False)
+                if not info:
+                    return None
+                title = (info.get("title") or "影片")[:80]
+                thumbnail = info.get("thumbnail") or ""
+                duration = info.get("duration") or 0
+                uploader = info.get("uploader") or info.get("channel") or info.get("creator") or ""
+                webpage_url = info.get("webpage_url") or real_url
+                # 平台偵測
+                plat_keys = {
+                    "bilibili": "Bilibili", "b23.tv": "Bilibili",
+                    "xiaohongshu": "Xiaohongshu", "xhslink": "Xiaohongshu",
+                    "shopee": "Shopee", "shp.ee": "Shopee", "sv.shopee": "Shopee",
+                    "tiktok": "TikTok", "instagram": "Instagram",
+                    "twitter": "Twitter", "x.com": "Twitter",
+                    "facebook": "Facebook", "fb.com": "Facebook", "fb.watch": "Facebook",
+                }
+                detected = "Unknown"
+                for key, name in plat_keys.items():
+                    if key in webpage_url or key in real_url:
+                        detected = name
+                        break
+                # 收集可用格式
+                fmts = info.get("formats") or []
+                available = []
+                seen = set()
+                for f in fmts:
+                    fid = str(f.get("format_id", ""))
+                    height = f.get("height", 0) or 0
+                    url_cdn = f.get("url", "") or ""
+                    has_audio = f.get("acodec", "none") != "none"
+                    has_video = f.get("vcodec", "none") != "none"
+                    if not url_cdn or not has_video:
+                        continue
+                    if has_video and has_audio:
+                        key = f"single_{height}"
+                        if key not in seen:
+                            seen.add(key)
+                            available.append({
+                                "id": fid,
+                                "label": f"{height}p" if height else "Audio",
+                                "height": height,
+                                "cdn_url": url_cdn,
+                                "single": True,
+                            })
+                available.sort(key=lambda x: -x["height"])
+                default_cdn = available[0]["cdn_url"] if available else (info.get("url") or "")
+                return {
+                    "title": title,
+                    "thumbnail": thumbnail,
+                    "duration": duration,
+                    "uploader": uploader,
+                    "platform": detected,
+                    "url": webpage_url,
+                    "has_video": bool(default_cdn),
+                    "cdn_url": default_cdn,
+                    "formats": available,
+                }
+        result = await asyncio.wait_for(
+            loop.run_in_executor(executor, _generic_parse), timeout=25
+        )
+        if result and result.get("has_video"):
+            return JSONResponse(result)
+        if result:
+            return JSONResponse({**result, "_note": "解析失敗，請確認連結是否有效"})
+    except Exception as e:
+        print(f"[generic] {e}")
+
     return JSONResponse({
         "title": "不支援的平台", "thumbnail": "", "duration": 0, "uploader": "",
         "platform": "Unknown", "url": real_url, "has_video": False,
         "cdn_url": "", "formats": [],
-        "_note": "目前僅支援抖音（douyin.com）和 YouTube",
+        "_note": f"無法解析此連結，支援：YouTube、抖音、小紅書、蝦皮短影音、Bilibili、TikTok、Instagram、Twitter/X、Facebook",
     })
 
 @app.get("/api/dl")
@@ -293,7 +367,11 @@ async def download_proxy(url: str, filename: str = "video.mp4"):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "超8去水印下载 API"}
+    return {
+        "status": "ok",
+        "service": "超8去水印下载 API",
+        "platforms": ["YouTube", "抖音 Douyin", "TikTok", "小紅書 Xiaohongshu", "蝦皮短影音 Shopee", "Bilibili", "Instagram", "Twitter/X", "Facebook"]
+    }
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7798))
