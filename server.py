@@ -89,13 +89,12 @@ async def _get_douyin_fast(url: str) -> dict:
     try:
         aweme_id = _parse_aweme_id(real_url)
         if aweme_id:
-            from crawlers.douyin.web.abogus import ABogus
-            from urllib.parse import quote as _q
+            from crawlers.douyin.web.utils import BogusManager
             params = {"aweme_id": aweme_id, "version_code": "170400", "app_name": "aweme",
                       "build_number": "170400", "device_platform": "android"}
             ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"
-            a_bogus = ABogus().get_value(params)
-            api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={_q(a_bogus, safe='')}"
+            a_bogus = BogusManager.ab_model_2_endpoint(params, ua)
+            api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(api_url, headers={
                     "User-Agent": ua,
