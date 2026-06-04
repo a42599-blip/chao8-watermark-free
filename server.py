@@ -6,6 +6,7 @@
 import asyncio, re, json, os, sys, time, shutil
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlencode, quote
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,7 +53,16 @@ async def resolve_short_url(url: str) -> str:
 # ── 抖音解析 ─────────────────────────────────────────────
 
 async def _get_douyin_fast(url: str) -> dict:
-    """取得抖音影片 CDN（tikwm + yt-dlp）"""
+    """取得抖音影片 CDN（tikwm + a_bogus API + yt-dlp）"""
+    # 先解析短網址
+    real_url = url
+    if "v.douyin.com" in url:
+        try:
+            async with httpx.AsyncClient(timeout=8, follow_redirects=True) as c:
+                r = await c.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                real_url = str(r.url)
+        except:
+            pass
     # 方法1：tikwm.com
     try:
         await asyncio.sleep(0.3)
@@ -75,7 +85,46 @@ async def _get_douyin_fast(url: str) -> dict:
     except Exception as e:
         print(f"[douyin/tikwm] {e}")
 
-    # 方法2：yt-dlp（嘗試使用 cookies）
+    # 方法2：a_bogus API（不需 cookies）
+    try:
+        aweme_id = _parse_aweme_id(real_url)
+        if aweme_id:
+            from crawlers.douyin.web.utils import BogusManager
+            from crawlers.douyin.web.models import PostDetail
+            import json as _json
+            params = {"aweme_id": aweme_id, "version_code": "170400", "app_name": "aweme",
+                      "build_number": "170400", "device_platform": "android"}
+            ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"
+            a_bogus = BogusManager.ab_model_2_endpoint(params, ua)
+            api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(api_url, headers={
+                    "User-Agent": ua,
+                    "Referer": "https://www.douyin.com/",
+                    "Accept": "application/json",
+                })
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "aweme_detail" in data and data["aweme_detail"]:
+                        ad = data["aweme_detail"]
+                        video = ad.get("video", {})
+                        play_addr = video.get("play_addr", {})
+                        url_list = play_addr.get("url_list", [])
+                        if url_list:
+                            cdn = url_list[0].replace("playwm", "play") if "douyinvod" in url_list[0] else url_list[0]
+                            return {
+                                "title": (ad.get("desc") or "抖音影片")[:80],
+                                "thumbnail": ad.get("video", {}).get("cover", {}).get("url_list", [""])[0] if ad.get("video", {}).get("cover", {}) else "",
+                                "duration": ad.get("duration", 0),
+                                "uploader": ad.get("author", {}).get("nickname", "") if ad.get("author") else "",
+                                "cdn_url": cdn,
+                            }
+    except ImportError:
+        print("[douyin/abogus] crawler module not available")
+    except Exception as e:
+        print(f"[douyin/abogus] {e}")
+
+    # 方法3：yt-dlp
     cookiefile = BASE_DIR / "cookies.txt"
     ydl_opts = {
         "quiet": True, "no_warnings": True, "skip_download": True,
