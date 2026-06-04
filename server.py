@@ -75,14 +75,18 @@ async def _get_douyin_fast(url: str) -> dict:
     except Exception as e:
         print(f"[douyin/tikwm] {e}")
 
-    # 方法2：yt-dlp
+    # 方法2：yt-dlp（嘗試使用 cookies）
+    cookiefile = BASE_DIR / "cookies.txt"
+    ydl_opts = {
+        "quiet": True, "no_warnings": True, "skip_download": True,
+        "http_headers": {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"},
+    }
+    if cookiefile.exists() and cookiefile.stat().st_size > 50:
+        ydl_opts["cookiefile"] = str(cookiefile)
     try:
         loop = asyncio.get_event_loop()
         def _dy_ytdlp():
-            with yt_dlp.YoutubeDL({
-                "quiet": True, "no_warnings": True, "skip_download": True,
-                "http_headers": {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"},
-            }) as ydl:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 if not info:
                     return {}
@@ -109,7 +113,10 @@ async def _get_douyin_fast(url: str) -> dict:
         if info and info.get("cdn_url"):
             return info
     except Exception as e:
-        print(f"[douyin/ytdlp] {e}")
+        err_msg = str(e)
+        print(f"[douyin/ytdlp] {err_msg[:80]}")
+        if "cookies" in err_msg.lower():
+            return {"need_cookies": True, "title": "抖音影片", "cdn_url": ""}
 
     return {}
 
@@ -228,11 +235,13 @@ async def video_info(url: str):
                 "cdn_url": fast["cdn_url"],
                 "formats": [{"id": "best", "label": "原始畫質（無浮水印）", "height": 0, "cdn_url": fast["cdn_url"], "single": True}],
             })
+        need_cookies = fast.get("need_cookies", False)
+        note = "抖音需要 cookies，請在 cookies.txt 中設定有效的抖音 cookies" if need_cookies else "解析失敗，請確認連結是否有效"
         return JSONResponse({
             "title": "抖音影片", "thumbnail": "", "duration": 0, "uploader": "",
             "platform": "Douyin", "url": real_url, "has_video": False,
             "cdn_url": "", "formats": [],
-            "_note": "解析失敗，請確認連結是否有效",
+            "_note": note,
         })
 
     # ── YouTube ──

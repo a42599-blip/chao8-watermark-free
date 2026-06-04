@@ -42,7 +42,7 @@ Cloudflare Worker (s8.v8i8.com)
 | 平台 | 支持状态 |
 |:----|:--------:|
 | YouTube | ✅ 360p ~ 1080p + CDN 直链 |
-| 抖音 Douyin | ✅ 无水印 CDN |
+| 抖音 Douyin | ⚠️ 需 cookies（見下方說明） |
 | TikTok | ✅ 通用 yt-dlp 解析 |
 | 小紅書 Xiaohongshu | ✅ 通用 yt-dlp 解析 |
 | 蝦皮短影音 Shopee | ✅ 通用 yt-dlp 解析 |
@@ -52,6 +52,9 @@ Cloudflare Worker (s8.v8i8.com)
 | Facebook | ✅ 通用 yt-dlp 解析 |
 
 > 通用解析透过 yt-dlp 实现，持续更新支援更多平台
+>
+> ⚠️ **抖音注意**：抖音目前需要有效的 cookies 才能解析。請在 `cookies.txt` 檔案中
+>    設定從瀏覽器導出的抖音 cookies，或將 cookies 設為 Railway 環境變數 `DOUYIN_COOKIES`。
 
 ## API 使用
 
