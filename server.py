@@ -91,9 +91,12 @@ async def _get_douyin_fast(url: str) -> dict:
         if aweme_id:
             from crawlers.douyin.web.abogus import ABogus
             from urllib.parse import quote as _q
-            params = {"aweme_id": aweme_id, "version_code": "170400", "app_name": "aweme",
-                      "build_number": "170400", "device_platform": "android"}
-            ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+            params = {"aweme_id": aweme_id, "version_code": "190500", "version_name": "19.5.0",
+                      "pc_client_type": 1, "aid": 6383, "channel": "channel_pc_web",
+                      "device_platform": "webapp", "screen_width": 1920, "screen_height": 1080,
+                      "browser_name": "Firefox", "browser_version": "124.0",
+                      "browser_online": "true", "os_name": "Windows", "os_version": "10"}
             a_bogus = ABogus().get_value(params)
             api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={_q(a_bogus, safe='')}"
             async with httpx.AsyncClient(timeout=10) as client:
