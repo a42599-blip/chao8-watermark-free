@@ -754,15 +754,25 @@ async function download() {
     } catch (_) {}
   }
 
-  // 直接從 CDN 下載（不用經過伺服器）
-  const a = document.createElement('a');
-  a.href = cdn;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // 嘗試從 CDN 直接下載
+  // 先用 fetch 抓取（透過 Worker 代理，自動帶入正確 headers）
+  try {
+    const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (_) {
+    // 備用：直接開 CDN 連結
+    const a = document.createElement('a');
+    a.href = cdn;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 }
 
 // ── Events ──
