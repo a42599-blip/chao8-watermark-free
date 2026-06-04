@@ -318,6 +318,22 @@ async def video_info(url: str):
             "_note": "解析失敗，請確認連結是否有效",
         })
 
+    # ── 先從網址偵測平台（不依賴 yt-dlp）──
+    PLATFORM_RULES = [
+        ("bilibili.com", "Bilibili"), ("b23.tv", "Bilibili"),
+        ("xiaohongshu.com", "Xiaohongshu"), ("xhslink.com", "Xiaohongshu"),
+        ("shopee", "Shopee"), ("shp.ee", "Shopee"), ("sv.shopee", "Shopee"),
+        ("tiktok.com", "TikTok"),
+        ("instagram.com", "Instagram"),
+        ("twitter.com", "Twitter"), ("x.com", "Twitter"),
+        ("facebook.com", "Facebook"), ("fb.com", "Facebook"), ("fb.watch", "Facebook"),
+    ]
+    detected_platform = "Unknown"
+    for keyword, name in PLATFORM_RULES:
+        if keyword in real_url:
+            detected_platform = name
+            break
+
     # ── 其他平台（通用 yt-dlp 解析）──
     try:
         loop = asyncio.get_event_loop()
@@ -333,20 +349,8 @@ async def video_info(url: str):
                 duration = info.get("duration") or 0
                 uploader = info.get("uploader") or info.get("channel") or info.get("creator") or ""
                 webpage_url = info.get("webpage_url") or real_url
-                # 平台偵測
-                plat_keys = {
-                    "bilibili": "Bilibili", "b23.tv": "Bilibili",
-                    "xiaohongshu": "Xiaohongshu", "xhslink": "Xiaohongshu",
-                    "shopee": "Shopee", "shp.ee": "Shopee", "sv.shopee": "Shopee",
-                    "tiktok": "TikTok", "instagram": "Instagram",
-                    "twitter": "Twitter", "x.com": "Twitter",
-                    "facebook": "Facebook", "fb.com": "Facebook", "fb.watch": "Facebook",
-                }
-                detected = "Unknown"
-                for key, name in plat_keys.items():
-                    if key in webpage_url or key in real_url:
-                        detected = name
-                        break
+                # 平台偵測（從 yt-dlp 結果補充）
+                detected = detected_platform
                 # 收集可用格式
                 fmts = info.get("formats") or []
                 available = []
@@ -395,7 +399,7 @@ async def video_info(url: str):
 
     return JSONResponse({
         "title": "不支援的平台", "thumbnail": "", "duration": 0, "uploader": "",
-        "platform": "Unknown", "url": real_url, "has_video": False,
+        "platform": detected_platform, "url": real_url, "has_video": False,
         "cdn_url": "", "formats": [],
         "_note": f"無法解析此連結，支援：YouTube、抖音、小紅書、蝦皮短影音、Bilibili、TikTok、Instagram、Twitter/X、Facebook",
     })
