@@ -632,6 +632,7 @@
 const LANG = {
   'zh-TW': {
     title: '超8 · 去水印下載',
+    subtitle: 'watermark · <span>free</span>',
     placeholder: '貼上影片連結  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook',
     pasteLink: '貼上連結',
     parse: '解析',
@@ -644,9 +645,15 @@ const LANG = {
     noUrl: '無下載網址',
     useLower: '請使用 720p 或更低畫質一鍵下載',
     platform: '支援解析',
+    badgeDy: '抖音',
+    badgeYt: 'YouTube',
+    networkError: '網路錯誤 — 請重試',
+    untitled: '無標題',
+    merge: '合併',
   },
   'zh-CN': {
     title: '超8 · 去水印下载',
+    subtitle: 'watermark · <span>free</span>',
     placeholder: '粘贴视频链接  YouTube · 抖音 · TikTok · Bilibili · 小红书 · 虾皮 · Instagram · Twitter · Facebook',
     pasteLink: '粘贴链接',
     parse: '解析',
@@ -659,9 +666,15 @@ const LANG = {
     noUrl: '无下载网址',
     useLower: '请使用 720p 或更低画质一键下载',
     platform: '支持解析',
+    badgeDy: '抖音',
+    badgeYt: 'YouTube',
+    networkError: '网络错误 — 请重试',
+    untitled: '无标题',
+    merge: '合并',
   },
   'en': {
     title: 'Chao8 · Watermark-Free Downloader',
+    subtitle: 'watermark · <span>free</span>',
     placeholder: 'Paste video link  YouTube · Douyin · TikTok · Bilibili · Xiaohongshu · Shopee · Instagram · Twitter · Facebook',
     pasteLink: 'Paste Link',
     parse: 'Parse',
@@ -674,6 +687,11 @@ const LANG = {
     noUrl: 'No download URL available',
     useLower: 'Use 720p or lower for one-click download',
     platform: 'Supported Platforms',
+    badgeDy: 'Douyin',
+    badgeYt: 'YouTube',
+    networkError: 'Network error — try again',
+    untitled: 'Untitled',
+    merge: 'Merge',
   },
 };
 let currentLang = 'zh-TW';
@@ -685,17 +703,18 @@ function setLang(lang) {
   urlInput.placeholder = t.placeholder;
   document.querySelector('.label-line span').textContent = t.pasteLink;
   parseBtn.textContent = t.parse;
+  document.querySelector('.sub').innerHTML = t.subtitle;
+  document.querySelectorAll('.badge').forEach((b, i) => {
+    if (i === 0) b.textContent = t.badgeDy;
+    if (i === 1) b.textContent = t.badgeYt;
+  });
   document.querySelector('.fmt-label').textContent = t.quality;
   dlBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h3.66V9h3.84L12 2z" transform="rotate(180,12,12)"/></svg> ' + t.download;
   document.querySelector('.tagline').innerHTML = t.tagline;
   document.querySelector('.pf-label').textContent = '\u25b8 ' + t.platform;
-  // Update lang buttons
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   document.documentElement.lang = lang;
 }
-
-// Apply default language
-setLang('zh-TW');
 
 // ── DOM ──
 const urlInput = document.getElementById('urlInput');
@@ -712,6 +731,9 @@ const fmtGrid = document.getElementById('fmtGrid');
 const formatSelector = document.getElementById('formatSelector');
 const dlBtn = document.getElementById('dlBtn');
 const dlNote = document.getElementById('dlNote');
+
+// Apply default language after DOM is ready
+setLang('zh-TW');
 
 let currentData = null;
 let currentFmt = null;
@@ -767,7 +789,7 @@ async function parseVideo() {
     currentData = data;
     renderCard(data);
   } catch (err) {
-    showToast('network error — try again', 'error');
+    showToast(LANG[currentLang].networkError, 'error');
   }
 
   parseBtn.disabled = false;
@@ -783,7 +805,7 @@ function renderCard(data) {
     thumbnail.style.display = 'none';
   }
 
-  videoTitle.textContent = data.title || 'untitled';
+  videoTitle.textContent = data.title || LANG[currentLang].untitled;
   videoUploader.textContent = data.uploader || '';
   videoDuration.textContent = secondsToTime(data.duration) ? secondsToTime(data.duration) : '';
   videoPlatform.textContent = data.platform || '';
@@ -801,7 +823,7 @@ function renderCard(data) {
       btn.className = 'fmt-btn' + (i === 0 ? ' active' : '');
       btn.innerHTML = f.label;
       if (!f.single) {
-        btn.innerHTML += '<span class="fmt-sub">merge</span>';
+        btn.innerHTML += '<span class="fmt-sub">' + LANG[currentLang].merge + '</span>';
       }
       btn.dataset.idx = i;
       btn.addEventListener('click', () => selectFmt(i));
