@@ -447,6 +447,23 @@
     color: var(--muted);
     opacity: 0.5;
   }
+  .platform-tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 12px 0 4px;
+  }
+  .platform-tags .tag {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid rgba(250,243,232,0.1);
+    color: var(--warm);
+    opacity: 0.7;
+    font-weight: 500;
+  }
 
   /* ── 打孔裝飾 ── */
   .perf {
@@ -542,12 +559,26 @@
     </div>
   </div>
 
+  <!-- Platform Tags -->
+  <div class="platform-tags">
+    <div class="tag">抖音</div>
+    <div class="tag">TikTok</div>
+    <div class="tag">B站</div>
+    <div class="tag">YouTube</div>
+    <div class="tag">小紅書</div>
+    <div class="tag">蝦皮</div>
+  </div>
+
   <!-- Footer -->
   <div class="footer">
     <div class="tagline">zero server load · direct <span>cdn</span></div>
     <div class="badges">
       <div class="badge">douyin</div>
+      <div class="badge">tiktok</div>
+      <div class="badge">bilibili</div>
       <div class="badge">youtube</div>
+      <div class="badge">xiaohongshu</div>
+      <div class="badge">shopee</div>
     </div>
   </div>
 
@@ -575,8 +606,8 @@ const dlNote = document.getElementById('dlNote');
 let currentData = null;
 let currentFmt = null;
 
-// API 端點：同網域（由 Worker 代理到後端）
-const API_BASE = '';
+// API 端點：自己的 Cloudflare Worker
+const API_BASE = 'https://chao8-api.a42599.workers.dev';
 
 // ── Toast ──
 function showToast(msg, type = '') {
