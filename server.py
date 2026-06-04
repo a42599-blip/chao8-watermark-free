@@ -118,8 +118,25 @@ async def _get_douyin_fast(url: str) -> dict:
                                 "uploader": ad.get("author", {}).get("nickname", "") if ad.get("author") else "",
                                 "cdn_url": cdn,
                             }
-    except ImportError:
-        print("[douyin/abogus] module not available")
+    except ImportError as e:
+        print(f"[douyin/abogus] import error: {e}")
+        # Fallback: try ABogus directly (std lib only)
+        try:
+            from crawlers.douyin.web.abogus import ABogus
+            from urllib.parse import quote as _q
+            a_bogus = _q(ABogus().get_value(params), safe='')
+            api_url2 = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(api_url2, headers={"User-Agent": ua, "Referer": "https://www.douyin.com/"})
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "aweme_detail" in data and data["aweme_detail"]:
+                        ad = data["aweme_detail"]; video = ad.get("video", {}); url_list = video.get("play_addr", {}).get("url_list", [])
+                        if url_list:
+                            dur = ad.get("duration", 0)
+                            return {"title": (ad.get("desc") or "抖音影片")[:80], "cdn_url": url_list[0].replace("playwm", "play"), "duration": dur//1000 if dur>1000 else dur, "uploader": ad.get("author",{}).get("nickname","") if ad.get("author") else "", "thumbnail": video.get("cover",{}).get("url_list",[""])[0] if video.get("cover") else ""}
+        except Exception as e2:
+            print(f"[douyin/abogus_fallback] {e2}")
     except Exception as e:
         print(f"[douyin/abogus] {e}")
 
