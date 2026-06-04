@@ -3,5 +3,3 @@ uvicorn[standard]==0.34.0
 httpx==0.28.1
 yt-dlp
 python-multipart==0.0.19
-qrcode
-pyyaml
