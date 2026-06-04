@@ -697,23 +697,32 @@ const LANG = {
 let currentLang = 'zh-TW';
 
 function setLang(lang) {
-  currentLang = lang;
-  const t = LANG[lang];
-  document.title = t.title;
-  urlInput.placeholder = t.placeholder;
-  document.querySelector('.label-line span').textContent = t.pasteLink;
-  parseBtn.textContent = t.parse;
-  document.querySelector('.sub').innerHTML = t.subtitle;
-  document.querySelectorAll('.badge').forEach((b, i) => {
-    if (i === 0) b.textContent = t.badgeDy;
-    if (i === 1) b.textContent = t.badgeYt;
-  });
-  document.querySelector('.fmt-label').textContent = t.quality;
-  dlBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h3.66V9h3.84L12 2z" transform="rotate(180,12,12)"/></svg> ' + t.download;
-  document.querySelector('.tagline').innerHTML = t.tagline;
-  document.querySelector('.pf-label').textContent = '\u25b8 ' + t.platform;
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
-  document.documentElement.lang = lang;
+  try {
+    currentLang = lang;
+    const t = LANG[lang];
+    document.title = t.title;
+    if (urlInput) urlInput.placeholder = t.placeholder;
+    const labelSpan = document.querySelector('.label-line span');
+    if (labelSpan) labelSpan.textContent = t.pasteLink;
+    if (parseBtn) parseBtn.textContent = t.parse;
+    const subEl = document.querySelector('.sub');
+    if (subEl) subEl.innerHTML = t.subtitle;
+    document.querySelectorAll('.badge').forEach((b, i) => {
+      if (i === 0) b.textContent = t.badgeDy;
+      if (i === 1) b.textContent = t.badgeYt;
+    });
+    const fmtLabel = document.querySelector('.fmt-label');
+    if (fmtLabel) fmtLabel.textContent = t.quality;
+    if (dlBtn) dlBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h3.66V9h3.84L12 2z" transform="rotate(180,12,12)"/></svg> ' + t.download;
+    const tagline = document.querySelector('.tagline');
+    if (tagline) tagline.innerHTML = t.tagline;
+    const pfLabel = document.querySelector('.pf-label');
+    if (pfLabel) pfLabel.textContent = '\u25b8 ' + t.platform;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    document.documentElement.lang = lang;
+  } catch(e) {
+    console.warn('setLang error:', e);
+  }
 }
 
 // ── DOM ──
