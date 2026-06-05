@@ -85,69 +85,47 @@ async def _get_douyin_fast(url: str) -> dict:
     except Exception as e:
         print(f"[douyin/tikwm] {e}")
 
-    # 方法2：a_bogus API（純技術簽名，不需 cookies）
+    # 方法2：a_bogus API + 公開 cookies
     try:
         aweme_id = _parse_aweme_id(real_url)
         if aweme_id:
             from crawlers.douyin.web.utils import BogusManager
-            params = {"aweme_id": aweme_id, "version_code": "170400", "app_name": "aweme",
-                      "build_number": "170400", "device_platform": "android"}
+            import re, yaml
+            async with httpx.AsyncClient(timeout=5) as c:
+                r = await c.get("https://www.douyin.com/", headers={"User-Agent": "Mozilla/5.0"})
+                fresh = dict(r.cookies)
+            cfg_path = BASE_DIR / "crawlers/douyin/web/config.yaml"
+            cookie_str = ""
+            if cfg_path.exists():
+                with open(cfg_path, encoding="utf-8") as f:
+                    cfg = yaml.safe_load(f)
+                cookie_str = cfg.get("TokenManager", {}).get("douyin", {}).get("headers", {}).get("Cookie", "")
+            for k, v in fresh.items():
+                old = re.search(f'{k}=[^;]+', cookie_str)
+                cookie_str = cookie_str.replace(old.group(), f'{k}={v}') if old else cookie_str + f'; {k}={v}'
+            params = {"aweme_id": aweme_id, "msToken": ""}
             ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"
             a_bogus = BogusManager.ab_model_2_endpoint(params, ua)
             api_url = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(api_url, headers={
-                    "User-Agent": ua,
-                    "Referer": "https://www.douyin.com/",
-                })
+            async with httpx.AsyncClient(timeout=5) as client:
+                headers = {"User-Agent": ua, "Referer": "https://www.douyin.com/"}
+                if cookie_str:
+                    headers["Cookie"] = cookie_str
+                resp = await client.get(api_url, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
                     if "aweme_detail" in data and data["aweme_detail"]:
                         ad = data["aweme_detail"]
-                        video = ad.get("video", {})
-                        play_addr = video.get("play_addr", {})
-                        url_list = play_addr.get("url_list", [])
-                        if url_list:
-                            cdn = url_list[0].replace("playwm", "play")
-                            dur = ad.get("duration", 0)
-                            if dur > 1000: dur //= 1000
-                            return {
-                                "title": (ad.get("desc") or "抖音影片")[:80],
-                                "thumbnail": video.get("cover", {}).get("url_list", [""])[0] if video.get("cover") else "",
-                                "duration": dur,
-                                "uploader": ad.get("author", {}).get("nickname", "") if ad.get("author") else "",
-                                "cdn_url": cdn,
-                            }
-    except ImportError as e:
-        print(f"[douyin/abogus] import error: {e}")
-        # Fallback: try ABogus directly (std lib only)
-        try:
-            from crawlers.douyin.web.abogus import ABogus
-            from urllib.parse import quote as _q
-            a_bogus = _q(ABogus().get_value(params), safe='')
-            api_url2 = f"https://www.douyin.com/aweme/v1/web/aweme/detail/?{urlencode(params)}&a_bogus={a_bogus}"
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(api_url2, headers={"User-Agent": ua, "Referer": "https://www.douyin.com/"})
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if "aweme_detail" in data and data["aweme_detail"]:
-                        ad = data["aweme_detail"]; video = ad.get("video", {}); url_list = video.get("play_addr", {}).get("url_list", [])
+                        video = ad.get("video", {}); play_addr = video.get("play_addr", {}); url_list = play_addr.get("url_list", [])
                         if url_list:
                             dur = ad.get("duration", 0)
                             return {"title": (ad.get("desc") or "抖音影片")[:80], "cdn_url": url_list[0].replace("playwm", "play"), "duration": dur//1000 if dur>1000 else dur, "uploader": ad.get("author",{}).get("nickname","") if ad.get("author") else "", "thumbnail": video.get("cover",{}).get("url_list",[""])[0] if video.get("cover") else ""}
-        except Exception as e2:
-            print(f"[douyin/abogus_fallback] {e2}")
+    except ImportError:
+        print("[douyin/abogus] module not available")
     except Exception as e:
         print(f"[douyin/abogus] {e}")
 
     # 方法3：yt-dlp
-    cookiefile = BASE_DIR / "cookies.txt"
-    ydl_opts = {
-        "quiet": True, "no_warnings": True, "skip_download": True,
-        "http_headers": {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"},
-    }
-    if cookiefile.exists() and cookiefile.stat().st_size > 50:
-        ydl_opts["cookiefile"] = str(cookiefile)
     try:
         loop = asyncio.get_event_loop()
         def _dy_ytdlp():
