@@ -827,24 +827,12 @@ function renderCard(data) {
 
   // Formats
   fmtGrid.innerHTML = '';
+  formatSelector.style.display = 'none';
   const fmts = data.formats || [];
-  if (fmts.length === 0) {
-    formatSelector.style.display = 'none';
-    currentFmt = { cdn_url: data.cdn_url || '', single: true };
+  if (fmts.length > 0 && fmts[0].cdn_url) {
+    currentFmt = fmts[0];
   } else {
-    formatSelector.style.display = 'block';
-    fmts.forEach((f, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'fmt-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = f.label;
-      if (!f.single) {
-        btn.innerHTML += '<span class="fmt-sub">' + LANG[currentLang].merge + '</span>';
-      }
-      btn.dataset.idx = i;
-      btn.addEventListener('click', () => selectFmt(i));
-      fmtGrid.appendChild(btn);
-    });
-    selectFmt(0);
+    currentFmt = { cdn_url: data.cdn_url || '', single: true };
   }
 
   // HD note
@@ -858,12 +846,6 @@ function renderCard(data) {
   hideToast();
 }
 
-function selectFmt(idx) {
-  const btns = fmtGrid.querySelectorAll('.fmt-btn');
-  btns.forEach((b, i) => b.classList.toggle('active', i === idx));
-  currentFmt = currentData.formats[idx];
-}
-
 // ── Download ──
 async function download() {
   if (!currentFmt || !currentFmt.cdn_url) {
@@ -872,65 +854,46 @@ async function download() {
   }
 
   const cdn = currentFmt.cdn_url;
-  const single = currentFmt.single !== false;
   const name = (currentData.title || 'video').replace(/[^\w\u4e00-\u9fff\-]/g, '_') + '.mp4';
-
-  if (!single) {
-    showToast(LANG[currentLang].useLower, 'error');
-    return;
-  }
-
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isMobile = isIOS || /Android/i.test(navigator.userAgent);
-  
-  // 透過 Worker 代理下載（自動帶入正確 headers）
+
+  // Worker 代理（Cloudflare Edge，不經 Railway）
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
   
-  if (isMobile) {
-    // 手機：用 fetch 抓 Blob 後儲存
-    showToast('Downloading...', '');
-    dlBtn.disabled = true;
-    try {
-      const resp = await fetch(dlUrl);
-      if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
-      const blob = await resp.blob();
-      const file = new File([blob], name, { type: 'video/mp4' });
-      
-      // iOS: 用 Share API 儲存到相簿
-      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+  dlBtn.disabled = true;
+  showToast('Downloading...', '');
+  
+  try {
+    const resp = await fetch(dlUrl);
+    if (!resp.ok) { showToast('Download failed', 'error'); dlBtn.disabled = false; return; }
+    const blob = await resp.blob();
+    const file = new File([blob], name, { type: 'video/mp4' });
+    
+    // iOS: Share API → 用戶可選「儲存到照片」
+    if (navigator.share) {
+      try {
         await navigator.share({ files: [file], title: name });
+        showToast('Saved!', '');
         dlBtn.disabled = false;
         return;
-      }
-      
-      // Android / iOS fallback：Blob URL 下載
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = name;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
-      showToast('Download started', '');
-    } catch(e) {
-      showToast('Download error, trying alternative...', 'error');
-      // Fallback: 開新分頁
-      window.open(dlUrl, '_blank');
+      } catch(e) { /* share cancelled or failed */ }
     }
-    dlBtn.disabled = false;
-    return;
+    
+    // Fallback: blob URL 下載
+    const blobUrl = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    showToast('Saved!', '');
+  } catch(e) {
+    showToast('Download error', 'error');
   }
-  
-  // 電腦：開新分頁下載
-  const a = document.createElement('a');
-  a.href = dlUrl;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  dlBtn.disabled = false;
+}
 }
 
 // ── Events ──
