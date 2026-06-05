@@ -939,8 +939,10 @@ async function pasteAndParse() {
     urlInput.value = text;
     parseVideo();
   } catch(e) {
+    // Mobile: focus input, tell user to paste - paste event will auto-trigger
+    urlInput.value = '';
     urlInput.focus();
-    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
+    showToast('Tap & hold the input field, select PASTE', '');
   }
 }
 
