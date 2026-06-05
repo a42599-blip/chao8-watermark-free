@@ -947,6 +947,14 @@ async function pasteAndParse() {
 parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
+
+// Auto-parse when user pastes into input (mobile friendly)
+urlInput.addEventListener('paste', function() {
+  setTimeout(() => {
+    if (urlInput.value.trim()) parseVideo();
+  }, 50);
+});
+
 // Paste button is in HTML with onclick=pasteAndParse()
 urlInput.focus();
 </script>
