@@ -576,7 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
-      <button id="parseBtn" onclick="parseVideo()">🔍 parse</button>
+      <button id="parseBtn" style="display:none">parse</button>
     </div>
   </div>
 
@@ -882,7 +882,63 @@ async function download() {
 
   // 透過 Worker 代理下載
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
-  window.open(dlUrl, '_blank');
+  
+  // 手機：用 blob 方式下載（可儲存到相簿）
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isMobile = isIOS || /Android/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    dlBtn.disabled = true;
+    showToast('Downloading...', '');
+    try {
+      const resp = await fetch(dlUrl);
+      if (!resp.ok) { showToast('Download failed', 'error'); dlBtn.disabled = false; return; }
+      const blob = await resp.blob();
+      const file = new File([blob], name, { type: 'video/mp4' });
+      
+      // iOS: Share API -> 可儲存到相簿
+      if (isIOS && navigator.share) {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: name });
+          dlBtn.disabled = false;
+          return;
+        }
+        // iOS fallback: 用 a 標籤下載
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = name;
+        a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        showToast('Saved! Check your Files app', '');
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+        dlBtn.disabled = false;
+        return;
+      }
+      
+      // Android: blob URL 下載
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = name;
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      showToast('Download started', '');
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+    } catch(e) {
+      showToast('Download error', 'error');
+      window.open(dlUrl, '_blank');
+    }
+    dlBtn.disabled = false;
+    return;
+  }
+  
+  // 電腦：直接下載
+  const a = document.createElement('a');
+  a.href = dlUrl;
+  a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 // ── Events ──
