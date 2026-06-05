@@ -576,7 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
-      <button id="parseBtn" style="display:none">parse</button>
+      <button id="parseBtn" style="padding:10px 12px;font-size:13px;border:none;border-radius:0 8px 8px 0;background:rgba(255,255,255,0.06);color:var(--muted);cursor:pointer;font-weight:500;transition:all 0.2s" onclick="parseVideo()">↵ parse</button>
     </div>
   </div>
 
@@ -921,8 +921,17 @@ async function pasteAndParse() {
     urlInput.value = text;
     parseVideo();
   } catch(e) {
+    // Clipboard blocked - fallback: focus + select all + auto-paste
+    urlInput.value = '';
     urlInput.focus();
-    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
+    document.execCommand('paste');
+    setTimeout(() => {
+      if (urlInput.value.trim()) {
+        parseVideo();
+      } else {
+        showToast('Click the input, Ctrl+V, then press Enter', 'error');
+      }
+    }, 100);
   }
 }
 
