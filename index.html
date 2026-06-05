@@ -574,8 +574,9 @@
   <div class="input-block">
     <div class="label-line"><span>paste link</span></div>
     <div class="input-group">
-      <input id="urlInput" type="text" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
+      <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
+      <button id="parseBtn" onclick="parseVideo()">🔍 parse</button>
     </div>
   </div>
 
@@ -634,7 +635,7 @@ const LANG = {
     title: '超8 · 去水印下載',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '貼上影片連結  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook',
-    pasteLink: '貼上',
+    pasteLink: '貼上連結',
     parse: '解析',
     parsing: '解析中...',
     quality: '畫質',
@@ -654,7 +655,7 @@ const LANG = {
     title: '超8 · 去水印下载',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '粘贴视频链接  YouTube · 抖音 · TikTok · Bilibili · 小红书 · 虾皮 · Instagram · Twitter · Facebook',
-    pasteLink: '贴上',
+    pasteLink: '粘贴链接',
     parse: '解析',
     parsing: '解析中...',
     quality: '画质',
@@ -674,7 +675,7 @@ const LANG = {
     title: 'Chao8 · Watermark-Free Downloader',
     subtitle: 'watermark · <span>free</span>',
     placeholder: 'Paste video link  YouTube · Douyin · TikTok · Bilibili · Xiaohongshu · Shopee · Instagram · Twitter · Facebook',
-    pasteLink: 'Paste',
+    pasteLink: 'Paste Link',
     parse: 'Parse',
     parsing: 'Parsing...',
     quality: 'Quality',
@@ -702,7 +703,9 @@ function setLang(lang) {
     const labelSpan = document.querySelector('.label-line span');
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
-    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.pasteLink;
+    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
+    const parseBtn = document.getElementById('parseBtn');
+    if (parseBtn) parseBtn.innerHTML = '🔍 ' + t.parse;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -730,6 +733,7 @@ function setLang(lang) {
 
 // ── DOM ──
 const urlInput = document.getElementById('urlInput');
+const parseBtn = document.getElementById('parseBtn');
 const toast = document.getElementById('toast');
 const reelCard = document.getElementById('reelCard');
 const thumbnail = document.getElementById('thumbnail');
@@ -784,6 +788,7 @@ async function parseVideo() {
 
   hideToast();
   showLoading();
+  parseBtn.disabled = true;
   reelCard.classList.remove('show');
 
   try {
@@ -792,6 +797,7 @@ async function parseVideo() {
 
     if (!data.has_video || !data.formats || data.formats.length === 0) {
       showToast(data._note || LANG[currentLang].parseFailed, 'error');
+      parseBtn.disabled = false;
       return;
     }
 
@@ -800,6 +806,8 @@ async function parseVideo() {
   } catch (err) {
     showToast(LANG[currentLang].networkError, 'error');
   }
+
+  parseBtn.disabled = false;
 }
 
 // ── Render ──
@@ -819,12 +827,24 @@ function renderCard(data) {
 
   // Formats
   fmtGrid.innerHTML = '';
-  formatSelector.style.display = 'none';
   const fmts = data.formats || [];
-  if (fmts.length > 0 && fmts[0].cdn_url) {
-    currentFmt = fmts[0];
-  } else {
+  if (fmts.length === 0) {
+    formatSelector.style.display = 'none';
     currentFmt = { cdn_url: data.cdn_url || '', single: true };
+  } else {
+    formatSelector.style.display = 'block';
+    fmts.forEach((f, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'fmt-btn' + (i === 0 ? ' active' : '');
+      btn.innerHTML = f.label;
+      if (!f.single) {
+        btn.innerHTML += '<span class="fmt-sub">' + LANG[currentLang].merge + '</span>';
+      }
+      btn.dataset.idx = i;
+      btn.addEventListener('click', () => selectFmt(i));
+      fmtGrid.appendChild(btn);
+    });
+    selectFmt(0);
   }
 
   // HD note
@@ -838,7 +858,11 @@ function renderCard(data) {
   hideToast();
 }
 
-
+function selectFmt(idx) {
+  const btns = fmtGrid.querySelectorAll('.fmt-btn');
+  btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+  currentFmt = currentData.formats[idx];
+}
 
 // ── Download ──
 async function download() {
@@ -872,39 +896,27 @@ async function download() {
       const blob = await resp.blob();
       const file = new File([blob], name, { type: 'video/mp4' });
       
-      // iOS: Share API → 用戶選「儲存到照片」
-      if (navigator.share) {
-        try {
-          await navigator.share({ files: [file], title: name });
-          showToast('Saved!', '');
-          dlBtn.disabled = false;
-          return;
-        } catch(e) {}
+      // iOS: 用 Share API 儲存到相簿
+      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        dlBtn.disabled = false;
+        return;
       }
       
-      // Fallback：直接下載
-      const blobUrl = URL.createObjectURL(file);
+      // Android / iOS fallback：Blob URL 下載
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = name;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-      showToast('Saved!', '');
-      
-      // Android / 電腦：<a download>
-      const blobUrl = URL.createObjectURL(file);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-      showToast('Saved!', '');
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+      showToast('Download started', '');
     } catch(e) {
-      showToast('Download error', 'error');
+      showToast('Download error, trying alternative...', 'error');
+      // Fallback: 開新分頁
+      window.open(dlUrl, '_blank');
     }
     dlBtn.disabled = false;
     return;
@@ -936,6 +948,7 @@ async function pasteAndParse() {
   showToast('Paste your link', '');
 }
 
+parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
 
