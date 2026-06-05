@@ -90,16 +90,11 @@ async def _get_douyin_fast(url: str) -> dict:
         aweme_id = _parse_aweme_id(real_url)
         if aweme_id:
             from crawlers.douyin.web.utils import BogusManager
-            import re, yaml
+            import re
             async with httpx.AsyncClient(timeout=5) as c:
                 r = await c.get("https://www.douyin.com/", headers={"User-Agent": "Mozilla/5.0"})
                 fresh = dict(r.cookies)
-            cfg_path = BASE_DIR / "crawlers/douyin/web/config.yaml"
-            cookie_str = ""
-            if cfg_path.exists():
-                with open(cfg_path, encoding="utf-8") as f:
-                    cfg = yaml.safe_load(f)
-                cookie_str = cfg.get("TokenManager", {}).get("douyin", {}).get("headers", {}).get("Cookie", "")
+            cookie_str = "__ac_nonce=067d687ac00d70af16eab; __ac_signature=_02B4Z6wo00f018O6kmgAAIDAR1H8JrcivBPDi5bAAJdBcf; ttwid=1%7C46sVJ6G5zO0ZRKBqbFef2B13U3CqP9gLwQEH8IV2y6A%7C1742112685%7Cae649397cca7dde21884d5f8e3e3d53eb2361aa64af04cd6889fa71d7f23344b"
             for k, v in fresh.items():
                 old = re.search(f'{k}=[^;]+', cookie_str)
                 cookie_str = cookie_str.replace(old.group(), f'{k}={v}') if old else cookie_str + f'; {k}={v}'
