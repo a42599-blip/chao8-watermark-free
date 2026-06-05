@@ -576,6 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="parseBtn">parse</button>
+      <button id="pasteBtn" style="padding:10px 12px;font-size:13px;border:none;border-radius:0 8px 8px 0;background:rgba(245,158,11,0.15);color:var(--amber);cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s" onclick="pasteAndParse()">📋 paste</button>
     </div>
   </div>
 
@@ -645,8 +646,7 @@ const LANG = {
     noUrl: '無下載網址',
     useLower: '請使用 720p 或更低畫質一鍵下載',
     platform: '支援解析',
-    badgeDy: '抖音',
-    badgeYt: 'YouTube',
+    platforms: ['YouTube', '抖音 Douyin', 'TikTok', 'Instagram', 'Twitter / X', 'Bilibili', '小紅書', '蝦皮短影音', 'Facebook'],
     networkError: '網路錯誤 — 請重試',
     untitled: '無標題',
     merge: '合併',
@@ -666,8 +666,7 @@ const LANG = {
     noUrl: '无下载网址',
     useLower: '请使用 720p 或更低画质一键下载',
     platform: '支持解析',
-    badgeDy: '抖音',
-    badgeYt: 'YouTube',
+    platforms: ['YouTube', '抖音 Douyin', 'TikTok', 'Instagram', 'Twitter / X', 'Bilibili', '小红书', '虾皮短视频', 'Facebook'],
     networkError: '网络错误 — 请重试',
     untitled: '无标题',
     merge: '合并',
@@ -687,8 +686,7 @@ const LANG = {
     noUrl: 'No download URL available',
     useLower: 'Use 720p or lower for one-click download',
     platform: 'Supported Platforms',
-    badgeDy: 'Douyin',
-    badgeYt: 'YouTube',
+    platforms: ['YouTube', 'Douyin', 'TikTok', 'Instagram', 'Twitter / X', 'Bilibili', 'Xiaohongshu', 'Shopee', 'Facebook'],
     networkError: 'Network error — try again',
     untitled: 'Untitled',
     merge: 'Merge',
@@ -705,6 +703,8 @@ function setLang(lang) {
     const labelSpan = document.querySelector('.label-line span');
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     if (parseBtn) parseBtn.textContent = t.parse;
+    const pasteBtn = document.getElementById('pasteBtn');
+    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -718,6 +718,11 @@ function setLang(lang) {
     if (tagline) tagline.innerHTML = t.tagline;
     const pfLabel = document.querySelector('.pf-label');
     if (pfLabel) pfLabel.textContent = '\u25b8 ' + t.platform;
+    // 動態產生平台列表
+    const pfBadges = document.getElementById('pf-badges');
+    if (pfBadges && t.platforms) {
+      pfBadges.innerHTML = t.platforms.map(p => '<span class="pf-badge">' + p + '</span>').join('');
+    }
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
     document.documentElement.lang = lang;
   } catch(e) {
@@ -910,9 +915,22 @@ async function download() {
 }
 
 // ── Events ──
+async function pasteAndParse() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) { showToast('Clipboard is empty', 'error'); return; }
+    urlInput.value = text;
+    parseVideo();
+  } catch(e) {
+    urlInput.focus();
+    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
+  }
+}
+
 parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
+// Paste button is in HTML with onclick=pasteAndParse()
 urlInput.focus();
 </script>
 
@@ -920,15 +938,7 @@ urlInput.focus();
   <div class="platform-footer">
     <div class="pf-inner">
       <span class="pf-label">▸ 支援解析</span>
-      <span class="pf-badge">YouTube</span>
-      <span class="pf-badge">抖音 Douyin</span>
-      <span class="pf-badge">TikTok</span>
-      <span class="pf-badge">Instagram</span>
-      <span class="pf-badge">Twitter / X</span>
-      <span class="pf-badge">Bilibili</span>
-      <span class="pf-badge">小紅書</span>
-      <span class="pf-badge">蝦皮短影音</span>
-      <span class="pf-badge">Facebook</span>
+      <div id="pf-badges"></div>
     </div>
   </div>
 
