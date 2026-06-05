@@ -574,7 +574,7 @@
   <div class="input-block">
     <div class="label-line"><span>paste link</span></div>
     <div class="input-group">
-      <textarea id="urlInput" class="url-inp" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" rows="1"></textarea>
+      <input id="urlInput" type="text" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
       <button id="parseBtn" onclick="parseVideo()">🔍 parse</button>
     </div>
@@ -890,21 +890,16 @@ async function download() {
         } catch(e) {}
       }
       
-      // Fallback：開新分頁，用戶可儲存
-      if (isIOS) {
-        const v = document.createElement('video');
-        v.src = URL.createObjectURL(file);
-        v.controls = true;
-        v.style.width = '100%';
-        v.style.maxHeight = '70vh';
-        const w = window.open('', '_blank');
-        w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center">');
-        w.document.write('<video src="' + URL.createObjectURL(file) + '" controls autoplay style="max-width:100%;max-height:100vh"></video>');
-        w.document.write('<p style="color:#fff;text-align:center;position:fixed;bottom:10px;left:0;right:0;font-size:14px">Tap Share → Save to Photos</p></body></html>');
-        showToast('Tap Share → Save to Photos', '');
-        dlBtn.disabled = false;
-        return;
-      }
+      // Fallback：直接下載
+      const blobUrl = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+      showToast('Saved!', '');
       
       // Android / 電腦：<a download>
       const blobUrl = URL.createObjectURL(file);
