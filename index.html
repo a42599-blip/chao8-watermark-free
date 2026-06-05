@@ -576,7 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
-      <button id="parseBtn" style="padding:10px 12px;font-size:13px;border:none;border-radius:0 8px 8px 0;background:rgba(255,255,255,0.06);color:var(--muted);cursor:pointer;font-weight:500;transition:all 0.2s" onclick="parseVideo()">↵ parse</button>
+      <button id="parseBtn" style="display:none">parse</button>
     </div>
   </div>
 
@@ -892,25 +892,9 @@ async function download() {
     } catch (_) {}
   }
 
-  // 嘗試從 CDN 直接下載
-  // 先用 fetch 抓取（透過 Worker 代理，自動帶入正確 headers）
-  try {
-    const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
-    const a = document.createElement('a');
-    a.href = dlUrl;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (_) {
-    // 備用：直接開 CDN 連結
-    const a = document.createElement('a');
-    a.href = cdn;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+  // 透過 Worker 代理下載（不跳轉頁面）
+  const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
+  window.open(dlUrl, '_blank');
 }
 
 // ── Events ──
