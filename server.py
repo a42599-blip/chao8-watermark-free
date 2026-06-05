@@ -325,6 +325,29 @@ async def _get_bilibili_direct(url: str) -> dict:
         return {}
 
 
+
+# ── Shopee 解析器 ─────────────────────────────
+SHOPEE_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://shopee.tw/"}
+
+def _is_shopee_url(url):
+    return any(d in url for d in ("shopee.tw", "shopee.sg", "shopee.vn", "shopee.ph", "shopee.my", "shopee.co.id", "shp.ee", "sv.shopee"))
+
+async def _get_shopee_video_info(url):
+    """取得蝦皮短影音"""
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as c:
+            r = await c.get(url, headers=SHOPEE_HEADERS)
+            html = r.text
+            import re
+            for pat in [r"https://[^\"]+\.shopee\.com\.tw/[^\"]+\.mp4", r"https://[^\"]+\.shopeesg\.com/[^\"]+\.mp4", r"video_url[^:]*:\s*\"([^\"]+)\""]:
+                m = re.search(pat, html)
+                if m:
+                    vurl = m.group(1) if m.lastindex else m.group()
+                    return {'title': 'Shopee Video', 'cdn_url': vurl, 'platform': 'Shopee'}
+    except:
+        pass
+    return {}
+
 @app.get("/")
 def index():
     return FileResponse(str(BASE_DIR / "index.html"),
@@ -359,6 +382,11 @@ async def video_info(url: str):
         })
 
     # ── YouTube ──
+    if _is_shopee_url(real_url):
+        shopee = await _get_shopee_video_info(real_url)
+        if shopee.get("cdn_url"):
+            return JSONResponse({**shopee, "has_video": True})
+    
     if _is_youtube(real_url):
         info = await _get_youtube_info(real_url)
         if info and info.get("formats"):

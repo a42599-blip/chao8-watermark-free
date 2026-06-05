@@ -704,8 +704,6 @@ function setLang(lang) {
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
     if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
-    const parseBtn = document.getElementById('parseBtn');
-    if (parseBtn) parseBtn.innerHTML = '🔍 ' + t.parse;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -880,95 +878,75 @@ async function download() {
     return;
   }
 
-  // 透過 Worker 代理下載
-  const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
-  
-  // 手機：用 blob 方式下載（可儲存到相簿）
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isMobile = isIOS || /Android/i.test(navigator.userAgent);
   
+  // 透過 Worker 代理下載（自動帶入正確 headers）
+  const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
+  
   if (isMobile) {
-    dlBtn.disabled = true;
+    // 手機：用 fetch 抓 Blob 後儲存
     showToast('Downloading...', '');
+    dlBtn.disabled = true;
     try {
       const resp = await fetch(dlUrl);
-      if (!resp.ok) { showToast('Download failed', 'error'); dlBtn.disabled = false; return; }
+      if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
       const blob = await resp.blob();
       const file = new File([blob], name, { type: 'video/mp4' });
       
-      // iOS: Share API -> 可儲存到相簿
-      if (isIOS && navigator.share) {
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: name });
-          dlBtn.disabled = false;
-          return;
-        }
-        // iOS fallback: 用 a 標籤下載
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = name;
-        a.style.display = 'none';
-        document.body.appendChild(a); a.click();
-        showToast('Saved! Check your Files app', '');
-        setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+      // iOS: 用 Share API 儲存到相簿
+      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
         dlBtn.disabled = false;
         return;
       }
       
-      // Android: blob URL 下載
+      // Android / iOS fallback：Blob URL 下載
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = name;
       a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      showToast('Download started', '');
+      document.body.appendChild(a);
+      a.click();
       setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+      showToast('Download started', '');
     } catch(e) {
-      showToast('Download error', 'error');
+      showToast('Download error, trying alternative...', 'error');
+      // Fallback: 開新分頁
       window.open(dlUrl, '_blank');
     }
     dlBtn.disabled = false;
     return;
   }
   
-  // 電腦：直接下載
+  // 電腦：開新分頁下載
   const a = document.createElement('a');
   a.href = dlUrl;
-  a.download = name;
+  a.target = '_blank';
+  a.rel = 'noopener';
   a.style.display = 'none';
-  document.body.appendChild(a); a.click(); a.remove();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ── Events ──
 async function pasteAndParse() {
-  // Try clipboard API first
   try {
     const text = await navigator.clipboard.readText();
-    if (text) {
-      urlInput.value = text;
-      parseVideo();
-      return;
-    }
-  } catch(e) {}
-  // Mobile fallback: focus input, paste event auto-triggers
-  urlInput.value = '';
-  urlInput.focus();
-  showToast('Paste your link', '');
+    if (!text) { showToast('Clipboard is empty', 'error'); return; }
+    urlInput.value = text;
+    parseVideo();
+  } catch(e) {
+    urlInput.focus();
+    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
+  }
 }
 
 parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
-
-// Auto-parse on paste (mobile friendly)
-urlInput.addEventListener('paste', function() {
-  setTimeout(() => {
-    if (urlInput.value.trim()) parseVideo();
-  }, 100);
-});
-
 // Paste button is in HTML with onclick=pasteAndParse()
 urlInput.focus();
 </script>
