@@ -576,7 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
-      <button id="parseBtn" style="display:none">parse</button>
+      <button id="parseBtn" onclick="parseVideo()">🔍 parse</button>
     </div>
   </div>
 
@@ -704,6 +704,8 @@ function setLang(lang) {
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
     if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
+    const parseBtn = document.getElementById('parseBtn');
+    if (parseBtn) parseBtn.innerHTML = '🔍 ' + t.parse;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -878,57 +880,9 @@ async function download() {
     return;
   }
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isMobile = isIOS || /Android/i.test(navigator.userAgent);
-  
-  // 透過 Worker 代理下載（自動帶入正確 headers）
+  // 透過 Worker 代理下載
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
-  
-  if (isMobile) {
-    // 手機：用 fetch 抓 Blob 後儲存
-    showToast('Downloading...', '');
-    dlBtn.disabled = true;
-    try {
-      const resp = await fetch(dlUrl);
-      if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
-      const blob = await resp.blob();
-      const file = new File([blob], name, { type: 'video/mp4' });
-      
-      // iOS: 用 Share API 儲存到相簿
-      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: name });
-        dlBtn.disabled = false;
-        return;
-      }
-      
-      // Android / iOS fallback：Blob URL 下載
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = name;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
-      showToast('Download started', '');
-    } catch(e) {
-      showToast('Download error, trying alternative...', 'error');
-      // Fallback: 開新分頁
-      window.open(dlUrl, '_blank');
-    }
-    dlBtn.disabled = false;
-    return;
-  }
-  
-  // 電腦：開新分頁下載
-  const a = document.createElement('a');
-  a.href = dlUrl;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  window.open(dlUrl, '_blank');
 }
 
 // ── Events ──
@@ -939,24 +893,14 @@ async function pasteAndParse() {
     urlInput.value = text;
     parseVideo();
   } catch(e) {
-    // Mobile: focus input, tell user to paste - paste event will auto-trigger
-    urlInput.value = '';
     urlInput.focus();
-    showToast('Tap & hold the input field, select PASTE', '');
+    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
   }
 }
 
 parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
-
-// Auto-parse when user pastes into input (mobile friendly)
-urlInput.addEventListener('paste', function() {
-  setTimeout(() => {
-    if (urlInput.value.trim()) parseVideo();
-  }, 50);
-});
-
 // Paste button is in HTML with onclick=pasteAndParse()
 urlInput.focus();
 </script>
