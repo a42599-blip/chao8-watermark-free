@@ -852,7 +852,7 @@ async function download() {
   const name = (currentData.title || 'video').replace(/[^\w\u4e00-\u9fff\-]/g, '_') + '.mp4';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // Worker 代理補 Referer（經 Cloudflare Edge，不經 Railway）
+  // Worker 代理補 Referer（經 Cloudflare Edge，不直接開 CDN）
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
   
   dlBtn.disabled = true;
@@ -860,11 +860,11 @@ async function download() {
   
   try {
     const resp = await fetch(dlUrl);
-    if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
+    if (!resp.ok) { showToast('Download failed', 'error'); dlBtn.disabled = false; return; }
     const blob = await resp.blob();
     const file = new File([blob], name, { type: 'video/mp4' });
     
-    // iOS: Share API → 用戶選「儲存到照片」
+    // iOS: Share API → 用戶可選「儲存到照片」
     if (isIOS && navigator.share) {
       try {
         await navigator.share({ files: [file], title: name });
@@ -872,25 +872,20 @@ async function download() {
         dlBtn.disabled = false;
         return;
       } catch(e) {}
-      // Share 失敗：開新分頁，用戶點分享→儲存到照片
-      window.open(URL.createObjectURL(blob), '_blank');
-      showToast('Tap Share → Save to Photos', '');
-      dlBtn.disabled = false;
-      return;
     }
     
-    // Android / 電腦：blob URL 下載
+    // iOS/Android/電腦：<a download> 下載
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
     a.download = name;
+    a.style.display = 'none';
     document.body.appendChild(a);
-    a.click(); a.remove();
-    URL.revokeObjectURL(blobUrl);
+    a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
     showToast('Saved!', '');
   } catch(e) {
-    showToast('Open in new tab', '');
-    window.open(cdn, '_blank');
+    showToast('Download error', 'error');
   }
   dlBtn.disabled = false;
 }
