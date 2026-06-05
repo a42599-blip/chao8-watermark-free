@@ -635,7 +635,7 @@ const LANG = {
     title: '超8 · 去水印下載',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '貼上影片連結  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook',
-    pasteLink: '貼上連結',
+    pasteLink: '貼上',
     parse: '解析',
     parsing: '解析中...',
     quality: '畫質',
@@ -655,7 +655,7 @@ const LANG = {
     title: '超8 · 去水印下载',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '粘贴视频链接  YouTube · 抖音 · TikTok · Bilibili · 小红书 · 虾皮 · Instagram · Twitter · Facebook',
-    pasteLink: '粘贴链接',
+    pasteLink: '贴上',
     parse: '解析',
     parsing: '解析中...',
     quality: '画质',
@@ -675,7 +675,7 @@ const LANG = {
     title: 'Chao8 · Watermark-Free Downloader',
     subtitle: 'watermark · <span>free</span>',
     placeholder: 'Paste video link  YouTube · Douyin · TikTok · Bilibili · Xiaohongshu · Shopee · Instagram · Twitter · Facebook',
-    pasteLink: 'Paste Link',
+    pasteLink: 'Paste',
     parse: 'Parse',
     parsing: 'Parsing...',
     quality: 'Quality',
@@ -703,7 +703,7 @@ function setLang(lang) {
     const labelSpan = document.querySelector('.label-line span');
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
-    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
+    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.pasteLink;
     const parseBtn = document.getElementById('parseBtn');
     if (parseBtn) parseBtn.innerHTML = '🔍 ' + t.parse;
     const subEl = document.querySelector('.sub');
