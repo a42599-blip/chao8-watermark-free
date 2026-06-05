@@ -635,7 +635,7 @@ const LANG = {
     title: '超8 · 去水印下載',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '貼上影片連結  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook',
-    pasteLink: '貼上連結',
+    pasteLink: '貼上',
     parse: '解析',
     parsing: '解析中...',
     quality: '畫質',
@@ -655,7 +655,7 @@ const LANG = {
     title: '超8 · 去水印下载',
     subtitle: 'watermark · <span>free</span>',
     placeholder: '粘贴视频链接  YouTube · 抖音 · TikTok · Bilibili · 小红书 · 虾皮 · Instagram · Twitter · Facebook',
-    pasteLink: '粘贴链接',
+    pasteLink: '贴上',
     parse: '解析',
     parsing: '解析中...',
     quality: '画质',
@@ -675,7 +675,7 @@ const LANG = {
     title: 'Chao8 · Watermark-Free Downloader',
     subtitle: 'watermark · <span>free</span>',
     placeholder: 'Paste video link  YouTube · Douyin · TikTok · Bilibili · Xiaohongshu · Shopee · Instagram · Twitter · Facebook',
-    pasteLink: 'Paste Link',
+    pasteLink: 'Paste',
     parse: 'Parse',
     parsing: 'Parsing...',
     quality: 'Quality',
@@ -849,65 +849,51 @@ async function download() {
   }
 
   const cdn = currentFmt.cdn_url;
-  const single = currentFmt.single !== false;
   const name = (currentData.title || 'video').replace(/[^\w\u4e00-\u9fff\-]/g, '_') + '.mp4';
-
-  if (!single) {
-    showToast(LANG[currentLang].useLower, 'error');
-    return;
-  }
-
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isMobile = isIOS || /Android/i.test(navigator.userAgent);
-  
-  // 透過 Worker 代理下載（自動帶入正確 headers）
+
+  // Worker 代理補 Referer（經 Cloudflare Edge，不經 Railway）
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
   
-  if (isMobile) {
-    // 手機：用 fetch 抓 Blob 後儲存
-    showToast('Downloading...', '');
-    dlBtn.disabled = true;
-    try {
-      const resp = await fetch(dlUrl);
-      if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
-      const blob = await resp.blob();
-      const file = new File([blob], name, { type: 'video/mp4' });
-      
-      // iOS: 用 Share API 儲存到相簿
-      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+  dlBtn.disabled = true;
+  showToast('Downloading...', '');
+  
+  try {
+    const resp = await fetch(dlUrl);
+    if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
+    const blob = await resp.blob();
+    const file = new File([blob], name, { type: 'video/mp4' });
+    
+    // iOS: Share API → 用戶選「儲存到照片」
+    if (isIOS && navigator.share) {
+      try {
         await navigator.share({ files: [file], title: name });
+        showToast('Saved!', '');
         dlBtn.disabled = false;
         return;
-      }
-      
-      // Android / iOS fallback：Blob URL 下載
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = name;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
-      showToast('Download started', '');
-    } catch(e) {
-      showToast('Download error, trying alternative...', 'error');
-      // Fallback: 開新分頁
-      window.open(dlUrl, '_blank');
+      } catch(e) {}
+      // Share 失敗：開新分頁，用戶點分享→儲存到照片
+      window.open(URL.createObjectURL(blob), '_blank');
+      showToast('Tap Share → Save to Photos', '');
+      dlBtn.disabled = false;
+      return;
     }
-    dlBtn.disabled = false;
-    return;
+    
+    // Android / 電腦：blob URL 下載
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click(); a.remove();
+    URL.revokeObjectURL(blobUrl);
+    showToast('Saved!', '');
+  } catch(e) {
+    showToast('Open in new tab', '');
+    window.open(cdn, '_blank');
   }
-  
-  // 電腦：開新分頁下載
-  const a = document.createElement('a');
-  a.href = dlUrl;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  dlBtn.disabled = false;
+}
 }
 
 // ── Events ──
