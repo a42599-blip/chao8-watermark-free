@@ -892,9 +892,16 @@ async function download() {
     } catch (_) {}
   }
 
-  // 透過 Worker 代理下載（不跳轉頁面）
+  // 透過 Worker 代理下載（開新分頁，不影響目前頁面）
   const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
-  window.open(dlUrl, '_blank');
+  const a = document.createElement('a');
+  a.href = dlUrl;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ── Events ──
