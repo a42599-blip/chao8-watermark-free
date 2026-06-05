@@ -703,7 +703,7 @@ function setLang(lang) {
     const labelSpan = document.querySelector('.label-line span');
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
-    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
+    if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.pasteLink;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -820,24 +820,12 @@ function renderCard(data) {
 
   // Formats
   fmtGrid.innerHTML = '';
+  formatSelector.style.display = 'none';
   const fmts = data.formats || [];
-  if (fmts.length === 0) {
-    formatSelector.style.display = 'none';
-    currentFmt = { cdn_url: data.cdn_url || '', single: true };
+  if (fmts.length > 0 && fmts[0].cdn_url) {
+    currentFmt = fmts[0];
   } else {
-    formatSelector.style.display = 'block';
-    fmts.forEach((f, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'fmt-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = f.label;
-      if (!f.single) {
-        btn.innerHTML += '<span class="fmt-sub">' + LANG[currentLang].merge + '</span>';
-      }
-      btn.dataset.idx = i;
-      btn.addEventListener('click', () => selectFmt(i));
-      fmtGrid.appendChild(btn);
-    });
-    selectFmt(0);
+    currentFmt = { cdn_url: data.cdn_url || '', single: true };
   }
 
   // HD note
@@ -851,11 +839,7 @@ function renderCard(data) {
   hideToast();
 }
 
-function selectFmt(idx) {
-  const btns = fmtGrid.querySelectorAll('.fmt-btn');
-  btns.forEach((b, i) => b.classList.toggle('active', i === idx));
-  currentFmt = currentData.formats[idx];
-}
+
 
 // ── Download ──
 async function download() {
