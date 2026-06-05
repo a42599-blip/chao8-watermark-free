@@ -900,15 +900,14 @@ async function download() {
 async function pasteAndParse() {
   try {
     const text = await navigator.clipboard.readText();
-    if (text) {
-      urlInput.value = text;
-      parseVideo();
-      return;
-    }
-  } catch(e) {}
-  urlInput.value = '';
-  urlInput.focus();
-  showToast('Paste your link', '');
+    if (!text) { showToast(LANG[currentLang].pleasePaste, 'error'); return; }
+    urlInput.value = text;
+    parseVideo();
+  } catch(e) {
+    urlInput.value = '';
+    urlInput.focus();
+    showToast(LANG[currentLang].pleasePaste, 'error');
+  }
 }
 
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
