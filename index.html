@@ -576,7 +576,7 @@
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
       <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
-      <button id="parseBtn" onclick="parseVideo()">🔍 parse</button>
+
     </div>
   </div>
 
@@ -704,8 +704,6 @@ function setLang(lang) {
     if (labelSpan) labelSpan.textContent = t.pasteLink;
     const pasteBtn = document.getElementById('pasteBtn');
     if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
-    const parseBtn = document.getElementById('parseBtn');
-    if (parseBtn) parseBtn.innerHTML = '🔍 ' + t.parse;
     const subEl = document.querySelector('.sub');
     if (subEl) subEl.innerHTML = t.subtitle;
     document.querySelectorAll('.badge').forEach((b, i) => {
@@ -733,7 +731,6 @@ function setLang(lang) {
 
 // ── DOM ──
 const urlInput = document.getElementById('urlInput');
-const parseBtn = document.getElementById('parseBtn');
 const toast = document.getElementById('toast');
 const reelCard = document.getElementById('reelCard');
 const thumbnail = document.getElementById('thumbnail');
@@ -788,7 +785,6 @@ async function parseVideo() {
 
   hideToast();
   showLoading();
-  parseBtn.disabled = true;
   reelCard.classList.remove('show');
 
   try {
@@ -797,7 +793,6 @@ async function parseVideo() {
 
     if (!data.has_video || !data.formats || data.formats.length === 0) {
       showToast(data._note || LANG[currentLang].parseFailed, 'error');
-      parseBtn.disabled = false;
       return;
     }
 
@@ -806,8 +801,6 @@ async function parseVideo() {
   } catch (err) {
     showToast(LANG[currentLang].networkError, 'error');
   }
-
-  parseBtn.disabled = false;
 }
 
 // ── Render ──
@@ -948,7 +941,6 @@ async function pasteAndParse() {
   showToast('Paste your link', '');
 }
 
-parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
 
