@@ -575,8 +575,8 @@
     <div class="label-line"><span>paste link</span></div>
     <div class="input-group">
       <input id="urlInput" type="url" placeholder="贴上影片连结  YouTube · 抖音 · TikTok · Bilibili · 小紅書 · 蝦皮 · Instagram · Twitter · Facebook" autocomplete="off" enterkeyhint="go">
-      <button id="parseBtn">parse</button>
-      <button id="pasteBtn" style="padding:10px 12px;font-size:13px;border:none;border-radius:0 8px 8px 0;background:rgba(245,158,11,0.15);color:var(--amber);cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s" onclick="pasteAndParse()">📋 paste</button>
+      <button id="pasteBtn" onclick="pasteAndParse()">📋 paste</button>
+      <button id="parseBtn" style="display:none">parse</button>
     </div>
   </div>
 
@@ -702,7 +702,6 @@ function setLang(lang) {
     if (urlInput) urlInput.placeholder = t.placeholder;
     const labelSpan = document.querySelector('.label-line span');
     if (labelSpan) labelSpan.textContent = t.pasteLink;
-    if (parseBtn) parseBtn.textContent = t.parse;
     const pasteBtn = document.getElementById('pasteBtn');
     if (pasteBtn) pasteBtn.innerHTML = '📋 ' + t.parse;
     const subEl = document.querySelector('.sub');
@@ -938,7 +937,17 @@ urlInput.focus();
   <div class="platform-footer">
     <div class="pf-inner">
       <span class="pf-label">▸ 支援解析</span>
-      <div id="pf-badges"></div>
+      <div id="pf-badges">
+        <span class="pf-badge">YouTube</span>
+        <span class="pf-badge">抖音 Douyin</span>
+        <span class="pf-badge">TikTok</span>
+        <span class="pf-badge">Instagram</span>
+        <span class="pf-badge">Twitter / X</span>
+        <span class="pf-badge">Bilibili</span>
+        <span class="pf-badge">小紅書</span>
+        <span class="pf-badge">蝦皮短影音</span>
+        <span class="pf-badge">Facebook</span>
+      </div>
     </div>
   </div>
 
