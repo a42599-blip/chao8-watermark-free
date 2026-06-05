@@ -249,6 +249,82 @@ async def _get_youtube_info(url: str) -> dict:
 
 # ── API 端點 ──────────────────────────────────────────────
 
+
+# ── Bilibili 解析器 ─────────────────────────────
+_BILI_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Referer": "https://www.bilibili.com/",
+    "Origin": "https://www.bilibili.com",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+}
+_BILI_COOKIE = "buvid3=local-12345678; b_nut=1700000000; b_lsid=ABC123;"
+
+import uuid as _uuid
+_BILI_HEADERS_WITH_COOKIE = {**_BILI_HEADERS, "Cookie": _BILI_COOKIE + f" buvid4={_uuid.uuid4().hex[:16]};"}
+
+async def _get_bilibili_direct(url: str) -> dict:
+    """直接打 Bilibili API 取得影片資訊和 CDN URL，不走 yt-dlp"""
+    bvid_m = re.search(r'BV[A-Za-z0-9]+', url)
+    aid_m  = re.search(r'av(\d+)', url, re.I)
+    if not bvid_m and not aid_m:
+        return {}
+    params = {"bvid": bvid_m.group()} if bvid_m else {"aid": aid_m.group(1)}
+    try:
+        async with httpx.AsyncClient(timeout=20, headers=_BILI_HEADERS_WITH_COOKIE) as client:
+            # Step 1: 取元數據（嘗試多個 API 端點）
+            meta = None
+            for api_url in ["https://api.bilibili.com/x/web-interface/view", "https://api.bilibili.com/x/web-interface/view/detail"]:
+                try:
+                    resp = await client.get(api_url, params=params)
+                    if resp.status_code == 200:
+                        meta = resp.json()
+                        if meta.get("code") == 0:
+                            break
+                        meta = None
+                except Exception:
+                    continue
+            if not meta or meta.get("code") != 0:
+                return {}
+            d = meta["data"]
+            bvid  = d.get("bvid", "")
+            cid   = d.get("cid", 0)
+            title = d.get("title", "")
+            thumb = d.get("pic", "")
+            dur   = d.get("duration", 0)
+            author = (d.get("owner") or {}).get("name", "")
+            embed_url = f"https://player.bilibili.com/player.html?bvid={bvid}&cid={cid}&high_quality=1&danmaku=0"
+
+            # Step 2: 取播放 URL（qn=80=1080P，qn=64=720P，不登入最高通常 480P）
+            for qn in [80, 64, 32, 16]:
+                pu = (await client.get(
+                    "https://api.bilibili.com/x/player/playurl",
+                    params={"bvid": bvid, "cid": cid, "qn": qn, "fnval": 1, "platform": "pc"}
+                )).json()
+                if pu.get("code") != 0:
+                    continue
+                durls = (pu.get("data") or {}).get("durl", [])
+                if durls:
+                    cdn_url = durls[0].get("url", "")
+                    if cdn_url:
+                        label = {80:"1080P", 64:"720P HD", 32:"480P", 16:"360P"}.get(qn, f"{qn}P")
+                        return {
+                            "title": title, "thumbnail": thumb, "duration": dur,
+                            "uploader": author, "platform": "Bilibili",
+                            "cdn_url": cdn_url, "cdn_audio_url": "",
+                            "embed_url": embed_url,
+                            "formats": [{"id": str(qn), "label": label, "height": 0}],
+                        }
+            # 拿不到直連，至少返回 embed
+            return {"title": title, "thumbnail": thumb, "duration": dur,
+                    "uploader": author, "platform": "Bilibili",
+                    "cdn_url": "", "embed_url": embed_url,
+                    "formats": [{"id": "embed", "label": "嵌入播放", "height": 0}]}
+    except Exception as ex:
+        print(f"[bilibili_direct] {ex}")
+        return {}
+
+
 @app.get("/")
 def index():
     return FileResponse(str(BASE_DIR / "index.html"),
@@ -322,6 +398,15 @@ async def video_info(url: str):
         if keyword in real_url:
             detected_platform = name
             break
+
+    # ── Bilibili ──
+    if "bilibili.com" in real_url or "b23.tv" in real_url:
+        bili = await _get_bilibili_direct(real_url)
+        if bili.get("cdn_url"):
+            return JSONResponse({**bili, "has_video": True, "platform": "Bilibili"})
+        if bili.get("title") and bili.get("title") != "不支援的平台":
+            return JSONResponse({**bili, "has_video": False, "platform": "Bilibili",
+                "_note": "解析失敗，請確認連結是否有效"})
 
     # ── 其他平台（通用 yt-dlp 解析）──
     try:
@@ -427,4 +512,5 @@ def health():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7798))
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
+
 

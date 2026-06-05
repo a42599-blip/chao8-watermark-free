@@ -878,22 +878,49 @@ async function download() {
     return;
   }
 
-  // iOS share
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS && navigator.share) {
+  const isMobile = isIOS || /Android/i.test(navigator.userAgent);
+  
+  // 透過 Worker 代理下載（自動帶入正確 headers）
+  const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
+  
+  if (isMobile) {
+    // 手機：用 fetch 抓 Blob 後儲存
+    showToast('Downloading...', '');
+    dlBtn.disabled = true;
     try {
-      const resp = await fetch(cdn, { mode: 'cors' });
+      const resp = await fetch(dlUrl);
+      if (!resp.ok) { showToast('Download failed: ' + resp.status, 'error'); dlBtn.disabled = false; return; }
       const blob = await resp.blob();
       const file = new File([blob], name, { type: 'video/mp4' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
+      
+      // iOS: 用 Share API 儲存到相簿
+      if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        dlBtn.disabled = false;
         return;
       }
-    } catch (_) {}
+      
+      // Android / iOS fallback：Blob URL 下載
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = name;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(blobUrl); }, 5000);
+      showToast('Download started', '');
+    } catch(e) {
+      showToast('Download error, trying alternative...', 'error');
+      // Fallback: 開新分頁
+      window.open(dlUrl, '_blank');
+    }
+    dlBtn.disabled = false;
+    return;
   }
-
-  // 透過 Worker 代理下載（開新分頁，不影響目前頁面）
-  const dlUrl = API_BASE + '/api/dl?url=' + encodeURIComponent(cdn) + '&filename=' + encodeURIComponent(name);
+  
+  // 電腦：開新分頁下載
   const a = document.createElement('a');
   a.href = dlUrl;
   a.target = '_blank';
@@ -912,17 +939,8 @@ async function pasteAndParse() {
     urlInput.value = text;
     parseVideo();
   } catch(e) {
-    // Clipboard blocked - fallback: focus + select all + auto-paste
-    urlInput.value = '';
     urlInput.focus();
-    document.execCommand('paste');
-    setTimeout(() => {
-      if (urlInput.value.trim()) {
-        parseVideo();
-      } else {
-        showToast('Click the input, Ctrl+V, then press Enter', 'error');
-      }
-    }, 100);
+    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
   }
 }
 
