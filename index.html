@@ -943,20 +943,32 @@ async function download() {
 
 // ── Events ──
 async function pasteAndParse() {
+  // Try clipboard API first
   try {
     const text = await navigator.clipboard.readText();
-    if (!text) { showToast('Clipboard is empty', 'error'); return; }
-    urlInput.value = text;
-    parseVideo();
-  } catch(e) {
-    urlInput.focus();
-    showToast('Paste manually (Ctrl+V) then click Parse', 'error');
-  }
+    if (text) {
+      urlInput.value = text;
+      parseVideo();
+      return;
+    }
+  } catch(e) {}
+  // Mobile fallback: focus input, paste event auto-triggers
+  urlInput.value = '';
+  urlInput.focus();
+  showToast('Paste your link', '');
 }
 
 parseBtn.addEventListener('click', parseVideo);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') parseVideo(); });
 dlBtn.addEventListener('click', download);
+
+// Auto-parse on paste (mobile friendly)
+urlInput.addEventListener('paste', function() {
+  setTimeout(() => {
+    if (urlInput.value.trim()) parseVideo();
+  }, 100);
+});
+
 // Paste button is in HTML with onclick=pasteAndParse()
 urlInput.focus();
 </script>
